@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: sync-or-sink
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+
