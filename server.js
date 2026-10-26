@@ -128,7 +128,8 @@ function finishVote(room) {
   let correctVoters = 0;
   for (const [voterId, choice] of Object.entries(room.votes)) {
     if ((room.imposterId && choice === room.imposterId) || (!room.imposterId && choice === 'none')) {
-      const voter = room.players.find(p => p.id === voterId); if (voter) { voter.score++; correctVoters++; }
+      const voter = room.players.find(p => p.id === voterId);
+      if (voter && voterId !== room.imposterId) { voter.score++; correctVoters++; }
     }
   }
   if (room.imposterId && !caught) { const p = room.players.find(x => x.id === room.imposterId); if (p) p.score += 2; }
@@ -186,7 +187,7 @@ io.on('connection', socket => {
   });
   socket.on('startGame', code => { const r = roomFor(code); if (r && socketPlayer(r, socket.id)?.id === r.hostId && r.phase === 'lobby' && r.players.length >= 3) { r.imposterRounds = Array.from({ length: 8 }, (_, i) => i + 1).sort(() => Math.random() - .5).slice(0, 3); startRound(r); } });
   socket.on('submitAnswer', ({ code, answer }) => { const r = roomFor(code), p = r?.players.find(x => x.socketId === socket.id); if (!r || r.phase !== 'answer' || !p || p.waiting || p.answer !== null) return; p.answer = String(answer || '').trim().slice(0, 72); broadcast(r); if (r.players.filter(x => x.connected && !x.waiting).every(x => x.answer !== null)) endAnswers(r); });
-  socket.on('castVote', ({ code, target }) => { const r = roomFor(code), p = r?.players.find(x => x.socketId === socket.id); if (!r || r.phase !== 'vote' || !p || p.waiting || r.votes[p.id]) return; if (target !== 'none' && !r.players.some(x => x.id === target && x.connected)) return; r.votes[p.id] = target; broadcast(r); if (r.players.filter(x => x.connected && !x.waiting).every(x => r.votes[x.id])) finishVote(r); });
+  socket.on('castVote', ({ code, target }) => { const r = roomFor(code), p = r?.players.find(x => x.socketId === socket.id); if (!r || r.phase !== 'vote' || !p || p.waiting || r.votes[p.id]) return; if (target !== 'none' && (target === p.id || !r.players.some(x => x.id === target && x.connected))) return; r.votes[p.id] = target; broadcast(r); if (r.players.filter(x => x.connected && !x.waiting).every(x => r.votes[x.id])) finishVote(r); });
   socket.on('react', ({ code, emoji }) => {
     const room = roomFor(code), player = socketPlayer(room, socket.id);
     const valid = ['😂', '🔥', '😱', '👀'];
